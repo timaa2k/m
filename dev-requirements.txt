@@ -1,0 +1,5 @@
+mypy==0.730
+pre-commit==1.18.3
+PyInstaller==3.5
+setuptools==41.2.0
+wheel==0.33.6

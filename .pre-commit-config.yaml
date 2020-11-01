@@ -1,0 +1,42 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: trailing-whitespace
+        stages: [commit]
+        exclude: ^vendor/
+      - id: mixed-line-ending
+        args: ["-f", "lf"]
+        exclude: \.bat$
+        stages: [commit]
+      - id: no-commit-to-branch
+        stages: [commit]
+      - id: check-added-large-files
+        stages: [commit]
+      - id: check-case-conflict
+        stages: [commit]
+      - id: check-merge-conflict
+        stages: [commit]
+      - id: forbid-new-submodules
+        stages: [commit]
+      - id: check-executables-have-shebangs
+        stages: [commit]
+      - id: check-symlinks
+        stages: [commit]
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: v0.12.0
+    hooks:
+      - id: gitlint
+        stages: [commit-msg]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v0.730'
+    hooks:
+    - id: mypy
+      args: [
+        --config-file=./mypy.ini
+        # --python-version=3.7,
+        # --warn-return-any,
+        # --warn-unused-configs,
+        # --disallow-untyped-defs,
+        # --ignore-missing-imports,
+      ]
