@@ -32,7 +32,7 @@ DEV_REQUIRES = _get_dependencies(
 LONG_DESCRIPTION = pathlib.Path('README.rst').read_text()
 
 setuptools.setup(
-    name="mother",
+    name="ms",
     version="0.1.0",
     author="Tim Weidner",
     author_email="timaa2k@gmail.com",

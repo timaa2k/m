@@ -38,50 +38,11 @@ def cli(ctx: click.Context, **kwargs: str) -> None:
 @cli.command()
 @click.argument('tags')
 @click.argument('filepath')
-def r(tags: str, filepath: str) -> None:
+def u(tags: str, filepath: str) -> None:
     t = basetags(set(tags.split('/')))
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
-    try:
-        result = api.get_latest(tags=t)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        if exc.kind != "Not found":
-            print(exc.err)
-            print(exc.kind)
-            return
-        with Path(filepath).open() as f:
-            try:
-                digest = api.put_latest(tags=t, content=f)
-            except motherlib.client.ConnectionError:
-                print(f'Unable to connect to server {SERVER_ADDR}.')
-                return
-            except motherlib.client.APIError as exc:
-                print(exc.err)
-                print(exc.kind)
-                return
-
-        print(digest)
-        return
-
-    if result.records is not None:
-        print(f'Aborting: {tags} is not a unique identifier.')
-        return
-
     with Path(filepath).open() as f:
-        try:
-            digest = api.put_latest(tags=t, content=f)
-        except motherlib.client.ConnectionError:
-            print(f'Unable to connect to server {SERVER_ADDR}.')
-            return
-        except motherlib.client.APIError as exc:
-            print(exc.err)
-            print(exc.kind)
-            return
-
-    print(digest)
-    return
+        print(api.put_latest(tags=t, content=f))
 
 
 @cli.command()
@@ -89,79 +50,33 @@ def r(tags: str, filepath: str) -> None:
 def e(tags: str) -> None:
     t = basetags(set(tags.split('/')))
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
+    exists = True
     try:
         result = api.get_latest(tags=t)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
     except motherlib.client.APIError as exc:
         if exc.kind != "Not found":
-            print(exc.err)
-            print(exc.kind)
-            return
-        message = click.edit('')
-        if message is None:
-            print('Aborting: empty content.')
-            return
-        try:
-            digest = api.put_latest(tags=t, content=str.encode(message))
-        except motherlib.client.ConnectionError:
-            print(f'Unable to connect to server {SERVER_ADDR}.')
-            return
-        except motherlib.client.APIError as exc:
-            print(exc.err)
-            print(exc.kind)
-            return
-        print(digest)
-        return
-
-    if result.records is not None:
-        print(f'Aborting: {tags} is not a unique identifier.')
-        return
-    try:
-        records = api.get_history(tags=t)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
-        return
-
-    message = click.edit(result.content.read().decode())
+            raise
+        exists = False
+    previous = ''
+    if exists:
+        previous = result.content.read().decode()
+    message = click.edit(previous)
     if message is None:
         print('Aborting: empty content.')
         return
-    try:
-        digest = api.put_latest(
-            tags=set(records[0].tags),
-            content=str.encode(message),
-        )
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
-        return
-
-    print(digest)
+    print(api.put_latest(tags=t, content=str.encode(message)))
 
 
 @cli.command()
-@click.argument('tags')
+@click.argument('tags', default='')
 def l(tags: str) -> None:
-    t = basetags(set(tags.split('/')))
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
-    try:
+    if len(tags) > 0 and tags[-1] == '/':
+        t = basetags(set(tags[:-1].split('/')))
+        result = api.get_superset_latest(tags=t)
+    else:
+        t = basetags(set(tags.split('/')))
         result = api.get_latest(tags=t)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
-        return
     if result.content is not None:
         print(result.content.read())
         return
@@ -169,135 +84,89 @@ def l(tags: str) -> None:
 
 
 @cli.command()
-@click.argument('tags')
+@click.argument('tags', default='')
 def h(tags: str) -> None:
-    t = basetags(set(tags.split('/')))
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
-    try:
+    if len(tags) > 0 and tags[-1] == '/':
+        t = basetags(set(tags[:-1].split('/')))
+        records = api.get_superset_history(tags=t)
+    else:
+        t = basetags(set(tags.split('/')))
         records = api.get_history(tags=t)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
-        return
     print_records(records)
-
-
-@cli.command()
-@click.argument('src')
-@click.argument('dst')
-def cp(src: str, dst: str) -> None:
-    s = basetags(set(src.split('/')))
-    d = basetags(set(dst.split('/')))
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
-    try:
-        records = api.get_history(tags=s)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
-        return
-
-    for r in reversed(records):
-        try:
-            content = api.get_blob(ref=r.ref)
-        except motherlib.client.ConnectionError:
-            print(f'Unable to connect to server {SERVER_ADDR}.')
-            return
-        except motherlib.client.APIError as exc:
-            print(exc.err)
-            print(exc.kind)
-            return
-
-        try:
-            digest = api.put_latest(
-                tags=d,
-                content=content,
-            )
-        except motherlib.client.ConnectionError:
-            print(f'Unable to connect to server {SERVER_ADDR}.')
-            return
-        except motherlib.client.APIError as exc:
-            print(exc.err)
-            print(exc.kind)
-            return
-
-        print(digest)
-        time.sleep(1)
-
-
-@cli.command()
-@click.argument('src')
-@click.argument('dst')
-def mv(src: str, dst: str) -> None:
-    s = basetags(set(src.split('/')))
-    d = basetags(set(dst.split('/')))
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
-    try:
-        records = api.get_history(tags=s)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
-        return
-
-    for r in reversed(records):
-        try:
-            content = api.get_blob(ref=r.ref)
-        except motherlib.client.ConnectionError:
-            print(f'Unable to connect to server {SERVER_ADDR}.')
-            return
-        except motherlib.client.APIError as exc:
-            print(exc.err)
-            print(exc.kind)
-            return
-
-        try:
-            digest = api.put_latest(tags=d, content=content)
-        except motherlib.client.ConnectionError:
-            print(f'Unable to connect to server {SERVER_ADDR}.')
-            return
-        except motherlib.client.APIError as exc:
-            print(exc.err)
-            print(exc.kind)
-            return
-
-        print(digest)
-        time.sleep(1)
-
-    for r in reversed(records):
-        try:
-            api.delete_history(tags=s)
-        except motherlib.client.ConnectionError:
-            print(f'Unable to connect to server {SERVER_ADDR}.')
-            return
-        except motherlib.client.APIError as exc:
-            print(exc.err)
-            print(exc.kind)
-            return
 
 
 @cli.command()
 @click.argument('tags')
 def d(tags: str) -> None:
-    t = basetags(set(tags.split('/')))
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
-    try:
+    if len(tags) > 0 and tags[-1] == '/':
+        t = basetags(set(tags[:-1].split('/')))
+        api.delete_superset_history(tags=t)
+    else:
+        t = basetags(set(tags.split('/')))
         api.delete_history(tags=t)
-    except motherlib.client.ConnectionError:
-        print(f'Unable to connect to server {SERVER_ADDR}.')
-        return
-    except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
-        return
+
+
+@cli.command()
+@click.argument('src', required=True)
+@click.argument('dst', required=True)
+def mv(src: str, dst: str) -> None:
+    api = motherlib.client.APIClient(addr=SERVER_ADDR)
+
+    superset_src = src[-1] == '/'
+    superset_dst = dst[-1] == '/'
+
+    src_tags = basetags(set(src.split('/')))
+    if superset_src:
+        src_tags = basetags(set(src[:-1].split('/')))
+
+    dst_tags = basetags(set(dst.split('/')))
+    if superset_dst:
+        dst_tags = basetags(set(dst[:-1].split('/')))
+
+
+    if superset_src or not superset_dst:
+        if src_tags == dst_tags:
+            print('Cannot mv: source is equal to destination.')
+            return
+
+    if not superset_src and superset_dst:
+        if src_tags <= dst_tags:
+            print('Cannot mv: source is a subset of destination.')
+            return
+        if dst_tags <= src_tags:
+            print('Cannot mv: destination is a subset of source.')
+            return
+
+    if superset_src:
+        records = api.get_superset_history(tags=src_tags)
+    else:
+        records = api.get_history(tags=src_tags)
+
+    for r in reversed(records):
+        content = api.get_blob(ref=r.ref)
+
+        new_tags = r.tags
+
+        if superset_src or not superset_dst:
+            new_tags = (r.tags - src_tags)
+
+        new_tags = new_tags | dst_tags
+
+        print(api.put_latest(tags=new_tags, content=content))
+
+        if superset_src:
+            api.delete_superset_history(tags=src_tags)
+        else:
+            api.delete_history(tags=src_tags)
 
 
 if __name__ == '__main__':
-    cli()
+    try:
+        cli()
+    except motherlib.client.ConnectionError:
+        print(f'Unable to connect to server {SERVER_ADDR}.')
+    except motherlib.client.APIError as exc:
+        print(exc.err)
+        print(exc.kind)
