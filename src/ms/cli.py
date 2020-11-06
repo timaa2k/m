@@ -2,25 +2,24 @@ import datetime
 import time
 import os
 from pathlib import Path
-from typing import Any, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import click
 
 import motherlib.client
 import motherlib.model
+from ms import __version__
 
 
-SERVER_ADDR = 'http://localhost:8080'
+def remove_if_in_target(tags: List[str], target: List[str]) -> List[str]:
+    n = {}
+    for tag in tags:
+        n[tag] = True
+    return [t for t in target if not n.get(t, False)]
 
 
 def filter_and_prefix_with_base(tags: List[str]) -> List[str]:
-    basetags = os.getenv('BASETAGS', '')
-    if basetags == '':
-        return tags
-    b = {}
-    for tag in basetags.split('/'):
-        b[tag] = True
-    return tags + [x for x in tags if not b.get(tag, False)]
+    return tags
 
 
 def print_records(records: List[motherlib.model.Record]) -> None:
@@ -28,33 +27,40 @@ def print_records(records: List[motherlib.model.Record]) -> None:
         print(f'{r.created.date()} {r.ref[:9]} {"/".join(r.tags)}')
 
 
-@click.group(invoke_without_command=True)
+@click.group()
+@click.option('-h', '--host', type=str, default='http://localhost:8080')
+@click.option('-n', '--namespace', type=str, default='')
+@click.version_option(version=__version__)
 @click.pass_context
-def cli(ctx: click.Context, **kwargs: str) -> None:
-    if ctx.invoked_subcommand is None:
-        ctx = click.get_current_context()
-        click.echo(ctx.get_help())
-        ctx.exit()
+def cli(ctx: click.Context, host: str, namespace: str) -> None:
+    if ctx.obj is None:
+       ctx.obj = {}  # type=Dict[str, Any]
+    ctx.obj['api'] = motherlib.client.APIClient(addr=os.getenv('MS_HOST', host))
+    ctx.obj['namespace'] = os.getenv('MS_NAMESPACE', namespace).split('/')
 
 
 @cli.command()
 @click.argument('tags')
 @click.argument('filepath')
-def u(tags: str, filepath: str) -> None:
-    t = filter_and_prefix_with_base(tags.split('/'))
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
+@click.pass_obj
+def u(ctx: Dict[str, Any], tags: str, filepath: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
+    t = remove_if_in_target(namespace, tags.split('/'))
     with Path(filepath).open() as f:
-        print(api.put_latest(tags=t, content=f))
+        print(api.put_latest(tags=namespace+t, content=f))
 
 
 @cli.command()
 @click.argument('tags')
-def e(tags: str) -> None:
-    t = filter_and_prefix_with_base(tags.split('/'))
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
+@click.pass_obj
+def e(ctx: Dict[str, Any], tags: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
+    t = remove_if_in_target(namespace, tags.split('/'))
     exists = True
     try:
-        result = api.get_latest(tags=t)
+        result = api.get_latest(tags=namespace+t)
     except motherlib.client.APIError as exc:
         if exc.kind != "Not found":
             raise
@@ -66,19 +72,21 @@ def e(tags: str) -> None:
     if message is None:
         print('Aborting: empty content.')
         return
-    print(api.put_latest(tags=t, content=str.encode(message)))
+    print(api.put_latest(tags=namespace+t, content=str.encode(message)))
 
 
 @cli.command()
 @click.argument('tags', default='')
-def l(tags: str) -> None:
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
+@click.pass_obj
+def l(ctx: Dict[str, Any], tags: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
     if len(tags) > 0 and tags[-1] == '/':
-        t = filter_and_prefix_with_base(tags[:-1].split('/'))
-        result = api.get_superset_latest(tags=t)
+        t = remove_if_in_target(namespace, tags[:-1].split('/'))
+        result = api.get_superset_latest(tags=namespace+t)
     else:
-        t = filter_and_prefix_with_base(tags.split('/'))
-        result = api.get_latest(tags=t)
+        t = remove_if_in_target(namespace, tags.split('/'))
+        result = api.get_latest(tags=namespace+t)
     if result.content is not None:
         print(result.content.read())
         return
@@ -87,46 +95,51 @@ def l(tags: str) -> None:
 
 @cli.command()
 @click.argument('tags', default='')
-def h(tags: str) -> None:
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
+@click.pass_obj
+def h(ctx: Dict[str, Any], tags: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
     if len(tags) > 0 and tags[-1] == '/':
-        t = filter_and_prefix_with_base(tags[:-1].split('/'))
-        records = api.get_superset_history(tags=t)
+        t = remove_if_in_target(namespace, tags[:-1].split('/'))
+        records = api.get_superset_history(tags=namespace+t)
     else:
-        t = filter_and_prefix_with_base(tags.split('/'))
-        records = api.get_history(tags=t)
+        t = remove_if_in_target(namespace, tags.split('/'))
+        records = api.get_history(tags=namespace+t)
     print_records(records)
 
 
 @cli.command()
 @click.argument('tags')
-def d(tags: str) -> None:
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
+@click.pass_obj
+def d(ctx: Dict[str, Any], tags: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
     if len(tags) > 0 and tags[-1] == '/':
-        t = filter_and_prefix_with_base(tags[:-1].split('/'))
-        api.delete_superset_history(tags=t)
+        t = remove_if_in_target(namespace, tags[:-1].split('/'))
+        api.delete_superset_history(tags=namespace+t)
     else:
-        t = filter_and_prefix_with_base(tags.split('/'))
-        api.delete_history(tags=t)
+        t = remove_if_in_target(namespace, tags.split('/'))
+        api.delete_history(tags=namespace+t)
 
 
 @cli.command()
 @click.argument('src', required=True)
 @click.argument('dst', required=True)
-def mv(src: str, dst: str) -> None:
-    api = motherlib.client.APIClient(addr=SERVER_ADDR)
+@click.pass_obj
+def mv(ctx: Dict[str, Any], src: str, dst: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
 
     superset_src = src[-1] == '/'
     superset_dst = dst[-1] == '/'
 
-    src_tags = filter_and_prefix_with_base(src.split('/'))
+    src_tags = remove_if_in_target(namespace, src.split('/'))
     if superset_src:
-        src_tags = filter_and_prefix_with_base(src[:-1].split('/'))
+        src_tags = remove_if_in_target(namespace, src[:-1].split('/'))
 
-    dst_tags = filter_and_prefix_with_base(dst.split('/'))
+    dst_tags = remove_if_in_target(namespace, dst.split('/'))
     if superset_dst:
-        dst_tags = filter_and_prefix_with_base(dst[:-1].split('/'))
-
+        dst_tags = remove_if_in_target(namespace, dst[:-1].split('/'))
 
     if superset_src or not superset_dst:
         if src_tags == dst_tags:
@@ -142,26 +155,26 @@ def mv(src: str, dst: str) -> None:
             return
 
     if superset_src:
-        records = api.get_superset_history(tags=src_tags)
+        records = api.get_superset_history(tags=namespace+src_tags)
     else:
-        records = api.get_history(tags=src_tags)
+        records = api.get_history(tags=namespace+src_tags)
 
     for r in reversed(records):
         content = api.get_blob(ref=r.ref)
 
-        new_tags = r.tags
+        moved_tags = r.tags[len(namespace):]
 
         if superset_src or not superset_dst:
-            new_tags = (r.tags - src_tags)
+            moved_tags = moved_tags[len(src_tags):]
 
-        new_tags = new_tags | dst_tags
+        dst_tags = dst_tags + moved_tags
 
-        print(api.put_latest(tags=new_tags, content=content))
+        print(api.put_latest(tags=namespace+dst_tags, content=content))
 
         if superset_src:
-            api.delete_superset_history(tags=src_tags)
+            api.delete_superset_history(tags=namespace+src_tags)
         else:
-            api.delete_history(tags=src_tags)
+            api.delete_history(tags=namespace+src_tags)
 
 
 if __name__ == '__main__':
