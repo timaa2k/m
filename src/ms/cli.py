@@ -2,7 +2,7 @@ import datetime
 import time
 import os
 from pathlib import Path
-from typing import Any, Iterable, List, Union, Set
+from typing import Any, Iterable, List, Union
 
 import click
 
@@ -13,12 +13,14 @@ import motherlib.model
 SERVER_ADDR = 'http://localhost:8080'
 
 
-def basetags(tags: Set[str]) -> Set[str]:
+def filter_and_prefix_with_base(tags: List[str]) -> List[str]:
     basetags = os.getenv('BASETAGS', '')
     if basetags == '':
         return tags
-    b = set(basetags.split('/'))
-    return b.union(tags)
+    b = {}
+    for tag in basetags.split('/'):
+        b[tag] = True
+    return tags + [x for x in tags if not b.get(tag, False)]
 
 
 def print_records(records: List[motherlib.model.Record]) -> None:
@@ -39,7 +41,7 @@ def cli(ctx: click.Context, **kwargs: str) -> None:
 @click.argument('tags')
 @click.argument('filepath')
 def u(tags: str, filepath: str) -> None:
-    t = basetags(set(tags.split('/')))
+    t = filter_and_prefix_with_base(tags.split('/'))
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
     with Path(filepath).open() as f:
         print(api.put_latest(tags=t, content=f))
@@ -48,7 +50,7 @@ def u(tags: str, filepath: str) -> None:
 @cli.command()
 @click.argument('tags')
 def e(tags: str) -> None:
-    t = basetags(set(tags.split('/')))
+    t = filter_and_prefix_with_base(tags.split('/'))
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
     exists = True
     try:
@@ -72,10 +74,10 @@ def e(tags: str) -> None:
 def l(tags: str) -> None:
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
     if len(tags) > 0 and tags[-1] == '/':
-        t = basetags(set(tags[:-1].split('/')))
+        t = filter_and_prefix_with_base(tags[:-1].split('/'))
         result = api.get_superset_latest(tags=t)
     else:
-        t = basetags(set(tags.split('/')))
+        t = filter_and_prefix_with_base(tags.split('/'))
         result = api.get_latest(tags=t)
     if result.content is not None:
         print(result.content.read())
@@ -88,10 +90,10 @@ def l(tags: str) -> None:
 def h(tags: str) -> None:
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
     if len(tags) > 0 and tags[-1] == '/':
-        t = basetags(set(tags[:-1].split('/')))
+        t = filter_and_prefix_with_base(tags[:-1].split('/'))
         records = api.get_superset_history(tags=t)
     else:
-        t = basetags(set(tags.split('/')))
+        t = filter_and_prefix_with_base(tags.split('/'))
         records = api.get_history(tags=t)
     print_records(records)
 
@@ -101,10 +103,10 @@ def h(tags: str) -> None:
 def d(tags: str) -> None:
     api = motherlib.client.APIClient(addr=SERVER_ADDR)
     if len(tags) > 0 and tags[-1] == '/':
-        t = basetags(set(tags[:-1].split('/')))
+        t = filter_and_prefix_with_base(tags[:-1].split('/'))
         api.delete_superset_history(tags=t)
     else:
-        t = basetags(set(tags.split('/')))
+        t = filter_and_prefix_with_base(tags.split('/'))
         api.delete_history(tags=t)
 
 
@@ -117,13 +119,13 @@ def mv(src: str, dst: str) -> None:
     superset_src = src[-1] == '/'
     superset_dst = dst[-1] == '/'
 
-    src_tags = basetags(set(src.split('/')))
+    src_tags = filter_and_prefix_with_base(src.split('/'))
     if superset_src:
-        src_tags = basetags(set(src[:-1].split('/')))
+        src_tags = filter_and_prefix_with_base(src[:-1].split('/'))
 
-    dst_tags = basetags(set(dst.split('/')))
+    dst_tags = filter_and_prefix_with_base(dst.split('/'))
     if superset_dst:
-        dst_tags = basetags(set(dst[:-1].split('/')))
+        dst_tags = filter_and_prefix_with_base(dst[:-1].split('/'))
 
 
     if superset_src or not superset_dst:
