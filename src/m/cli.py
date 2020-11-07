@@ -68,11 +68,11 @@ def e(ctx: Dict[str, Any], tags: str) -> None:
         if exc.kind != "Not found":
             raise
         exists = False
-    if len(records) > 1:
-        print_records(records)
-        return
     previous = ''
     if exists:
+        if len(records) > 1:
+            print_records(records)
+            return
         content = api.get_blob(records[0].ref)
         previous = content.read().decode()
     message = click.edit(previous)
@@ -163,7 +163,7 @@ def mv(ctx: Dict[str, Any], src: str, dst: str) -> None:
         api.delete_history(tags=namespace+src_tags)
 
 
-if __name__ == '__main__':
+def main():
     try:
         cli()
     except motherlib.client.ConnectionError:
@@ -171,3 +171,7 @@ if __name__ == '__main__':
     except motherlib.client.APIError as exc:
         print(exc.err)
         print(exc.kind)
+
+
+if __name__ == '__main__':
+    main()

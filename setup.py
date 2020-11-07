@@ -54,5 +54,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     dependency_links=[],
-    entry_points={"console_scripts": ["m=m.cli:cli"]},
+    entry_points={"console_scripts": ["m=m.cli:main"]},
 )
