@@ -28,30 +28,18 @@ def print_records(records: List[motherlib.model.Record]) -> None:
 
 
 @click.group(invoke_without_command=True)
-@click.argument('tags', default='')
 @click.option('-h', '--host', type=str, default='http://localhost:8080')
 @click.option('-n', '--namespace', type=str, default='')
 @click.version_option(version=__version__)
 @click.pass_context
-def cli(ctx: click.Context, tags: str, host: str, namespace: str) -> None:
+def cli(ctx: click.Context, host: str, namespace: str) -> None:
     if ctx.obj is None:
        ctx.obj = {}  # type=Dict[str, Any]
     ctx.obj['api'] = motherlib.client.APIClient(addr=os.getenv('M_HOST', host))
     ns_tags = os.getenv('M_NAMESPACE', namespace)
     ctx.obj['namespace'] = [] if ns_tags == '' else ns_tags.split('/')
     if ctx.invoked_subcommand is None:
-        api = ctx.obj['api']
-        ns = ctx.obj['namespace']
-        if len(tags) > 0 and tags[-1] == '/':
-            t = remove_if_in_target(ns, tags[:-1].split('/'))
-            result = api.get_superset_latest(tags=ns+t)
-        else:
-            t = remove_if_in_target(ns, tags.split('/'))
-            result = api.get_latest(tags=ns+t)
-        if result.content is not None:
-            print(result.content.read())
-            return
-        print_records(result.records)
+        ctx.invoke(l)
 
 
 @cli.command()
@@ -88,6 +76,24 @@ def e(ctx: Dict[str, Any], tags: str) -> None:
         print('Aborting: empty content.')
         return
     print(api.put_latest(tags=namespace+t, content=str.encode(message)))
+
+
+@cli.command()
+@click.argument('tags', default='')
+@click.pass_obj
+def l(ctx: Dict[str, Any], tags: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
+    if len(tags) > 0 and tags[-1] == '/':
+        t = remove_if_in_target(namespace, tags[:-1].split('/'))
+        result = api.get_superset_latest(tags=namespace+t)
+    else:
+        t = remove_if_in_target(namespace, tags.split('/'))
+        result = api.get_latest(tags=namespace+t)
+    if result.content is not None:
+        print(result.content.read())
+        return
+    print_records(result.records)
 
 
 @cli.command()
