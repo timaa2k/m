@@ -32,14 +32,14 @@ DEV_REQUIRES = _get_dependencies(
 LONG_DESCRIPTION = pathlib.Path('README.rst').read_text()
 
 setuptools.setup(
-    name="ms",
+    name="m",
     version="0.1.0",
     author="Tim Weidner",
     author_email="timaa2k@gmail.com",
     description="Mothership CLI",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/x-rst",
-    url="https://github.com/timaa2k/ms",
+    url="https://github.com/timaa2k/m",
     include_package_data=True,
     packages=setuptools.find_packages(where='src'),
     package_dir={'': 'src'},
@@ -54,5 +54,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     dependency_links=[],
-    entry_points={"console_scripts": ["ms=ms:cli"]},
+    entry_points={"console_scripts": ["m=m.cli:cli"]},
 )

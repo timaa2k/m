@@ -8,10 +8,10 @@ pip install --upgrade pip
 
 pip install -e '.[dev]'
 
-pyinstaller --onefile src/ms/cli.py
+pyinstaller --onefile src/m/cli.py
 
 deactivate
 
 rm -rf test-env
 
-mv dist/cli dist/ms
+mv dist/cli dist/m
