@@ -63,17 +63,21 @@ def e(ctx: Dict[str, Any], tags: str) -> None:
     t = remove_if_in_target(namespace, tags.split('/'))
     exists = True
     try:
-        result = api.get_latest(tags=namespace+t)
+        records = api.get_latest(tags=namespace+t)
     except motherlib.client.APIError as exc:
         if exc.kind != "Not found":
             raise
         exists = False
+    if len(records) > 1:
+        print_records(records)
+        return
     previous = ''
     if exists:
-        previous = result.content.read().decode()
+        content = api.get_blob(records[0].ref)
+        previous = content.read().decode()
     message = click.edit(previous)
     if message is None:
-        print('Aborting: empty content.')
+        print('Leaving content unchanged.')
         return
     print(api.put_latest(tags=namespace+t, content=str.encode(message)))
 
@@ -84,16 +88,22 @@ def e(ctx: Dict[str, Any], tags: str) -> None:
 def l(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
-    if len(tags) > 0 and tags[-1] == '/':
-        t = remove_if_in_target(namespace, tags[:-1].split('/'))
-        result = api.get_superset_latest(tags=namespace+t)
+    t = remove_if_in_target(namespace, tags.split('/'))
+    print_records(api.get_latest(tags=namespace+t))
+
+
+@cli.command()
+@click.argument('tags', default='')
+@click.pass_obj
+def s(ctx: Dict[str, Any], tags: str) -> None:
+    api = ctx['api']
+    namespace = ctx['namespace']
+    t = remove_if_in_target(namespace, tags.split('/'))
+    records = api.get_latest(tags=namespace+t)
+    if len(records) == 1:
+        print(api.get_blob(records[0].ref).read())
     else:
-        t = remove_if_in_target(namespace, tags.split('/'))
-        result = api.get_latest(tags=namespace+t)
-    if result.content is not None:
-        print(result.content.read())
-        return
-    print_records(result.records)
+        print_records(records)
 
 
 @cli.command()
@@ -102,13 +112,8 @@ def l(ctx: Dict[str, Any], tags: str) -> None:
 def h(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
-    if len(tags) > 0 and tags[-1] == '/':
-        t = remove_if_in_target(namespace, tags[:-1].split('/'))
-        records = api.get_superset_history(tags=namespace+t)
-    else:
-        t = remove_if_in_target(namespace, tags.split('/'))
-        records = api.get_history(tags=namespace+t)
-    print_records(records)
+    t = remove_if_in_target(namespace, tags.split('/'))
+    print_records(api.get_history(tags=namespace+t))
 
 
 @cli.command()
@@ -117,12 +122,8 @@ def h(ctx: Dict[str, Any], tags: str) -> None:
 def d(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
-    if len(tags) > 0 and tags[-1] == '/':
-        t = remove_if_in_target(namespace, tags[:-1].split('/'))
-        api.delete_superset_history(tags=namespace+t)
-    else:
-        t = remove_if_in_target(namespace, tags.split('/'))
-        api.delete_history(tags=namespace+t)
+    t = remove_if_in_target(namespace, tags.split('/'))
+    api.delete_history(tags=namespace+t)
 
 
 @cli.command()
@@ -133,51 +134,33 @@ def mv(ctx: Dict[str, Any], src: str, dst: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
 
-    superset_src = src[-1] == '/'
-    superset_dst = dst[-1] == '/'
-
     src_tags = remove_if_in_target(namespace, src.split('/'))
-    if superset_src:
-        src_tags = remove_if_in_target(namespace, src[:-1].split('/'))
-
     dst_tags = remove_if_in_target(namespace, dst.split('/'))
-    if superset_dst:
-        dst_tags = remove_if_in_target(namespace, dst[:-1].split('/'))
 
-    if superset_src or not superset_dst:
-        if src_tags == dst_tags:
-            print('Cannot mv: source is equal to destination.')
-            return
+    if set(src_tags) == set(dst_tags):
+        print('Cannot mv: source is equal to destination.')
+        return
 
-    if not superset_src and superset_dst:
-        if src_tags <= dst_tags:
-            print('Cannot mv: source is a subset of destination.')
-            return
-        if dst_tags <= src_tags:
-            print('Cannot mv: destination is a subset of source.')
-            return
+    if set(src_tags) <= set(dst_tags):
+        print('Cannot mv: source is a subset of destination.')
+        return
 
-    if superset_src:
-        records = api.get_superset_history(tags=namespace+src_tags)
-    else:
-        records = api.get_history(tags=namespace+src_tags)
+    if set(dst_tags) <= set(src_tags):
+        print('Cannot mv: destination is a subset of source.')
+        return
+
+    records = api.get_history(tags=namespace+src_tags)
 
     for r in reversed(records):
-        content = api.get_blob(ref=r.ref)
+        content = api.get_blob(ref=r.ref).read()
 
-        moved_tags = r.tags[len(namespace):]
+        t = namespace + dst_tags + r.tags
 
-        if superset_src or not superset_dst:
-            moved_tags = moved_tags[len(src_tags):]
+        digest = api.put_latest(tags=t, content=content)
 
-        dst_tags = dst_tags + moved_tags
+        print(digest)
 
-        print(api.put_latest(tags=namespace+dst_tags, content=content))
-
-        if superset_src:
-            api.delete_superset_history(tags=namespace+src_tags)
-        else:
-            api.delete_history(tags=namespace+src_tags)
+        api.delete_history(tags=namespace+src_tags)
 
 
 if __name__ == '__main__':
