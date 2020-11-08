@@ -38,5 +38,5 @@ Lifecycle Example
    alias blogarchive='M_NAMESPACE=blogapp m mv blog/published archive'
 
    # Simple bookmarks application
-   alias gotoapp='M_NAMESPACE=gotoapp/bookmarks lifecycle'
-   alias goto='gotoapp bookmarks'
+   alias gotoapp='M_NAMESPACE=gotoapp/shortlinks lifecycle'
+   alias goto='gotoapp shortlinks'

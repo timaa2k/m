@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
 import click
+from validator_collection import checkers
 
 import motherlib.client
 import motherlib.model
@@ -94,6 +95,12 @@ def ls(ctx: Dict[str, Any], tags: str) -> None:
     print_records(api.get_latest(tags=namespace+t))
 
 
+def is_binary(content: bytes) -> bool:
+    textchars = bytearray([7,8,9,10,12,13,27]) + bytearray(range(0x20, 0x7f)) + bytearray(range(0x80, 0x100))
+    is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
+    return is_binary_string(content)
+
+
 @cli.command()
 @click.argument('tags', required=True)
 @click.pass_obj
@@ -107,13 +114,15 @@ def cat(ctx: Dict[str, Any], tags: str) -> None:
         print_records(records)
     else:
         digest = records[0].ref
-        plain = False
-        if plain:
-            content = api.get_blob(digest).read()
-        else:
-            location = '/'.join(namespace+t)
-            URL = f'{api.addr}/latest/{location}/'
-            webbrowser.open_new_tab(URL)
+        content = api.get_blob(digest).read()
+        if not is_binary(content):
+            decoded = content.decode()
+            if not checkers.is_url(decoded):
+                print(decoded)
+                return
+        location = '/'.join(namespace+t)
+        URL = f'{api.addr}/latest/{location}/'
+        webbrowser.open_new_tab(URL)
 
 
 @cli.command()
