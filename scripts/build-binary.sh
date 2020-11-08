@@ -6,7 +6,7 @@ source test-env/bin/activate
 
 pip install --upgrade pip
 
-pip install -e '.[dev]'
+pip install '.[dev]'
 
 pyinstaller --onefile src/m/cli.py
 

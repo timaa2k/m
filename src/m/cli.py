@@ -39,14 +39,14 @@ def cli(ctx: click.Context, host: str, namespace: str) -> None:
     ns_tags = os.getenv('M_NAMESPACE', namespace)
     ctx.obj['namespace'] = [] if ns_tags == '' else ns_tags.split('/')
     if ctx.invoked_subcommand is None:
-        ctx.invoke(l)
+        ctx.invoke(ls)
 
 
 @cli.command()
-@click.argument('tags')
-@click.argument('filepath')
+@click.argument('tags', required=True)
+@click.argument('filepath', required=True)
 @click.pass_obj
-def u(ctx: Dict[str, Any], tags: str, filepath: str) -> None:
+def upload(ctx: Dict[str, Any], tags: str, filepath: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
     t = remove_if_in_target(namespace, tags.split('/'))
@@ -55,9 +55,9 @@ def u(ctx: Dict[str, Any], tags: str, filepath: str) -> None:
 
 
 @cli.command()
-@click.argument('tags')
+@click.argument('tags', required=True)
 @click.pass_obj
-def e(ctx: Dict[str, Any], tags: str) -> None:
+def edit(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
     t = remove_if_in_target(namespace, tags.split('/'))
@@ -85,20 +85,22 @@ def e(ctx: Dict[str, Any], tags: str) -> None:
 @cli.command()
 @click.argument('tags', default='')
 @click.pass_obj
-def l(ctx: Dict[str, Any], tags: str) -> None:
+def ls(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
-    t = remove_if_in_target(namespace, tags.split('/'))
+    t = [] if tags == '' else tags.split('/')
+    t = remove_if_in_target(namespace, t)
     print_records(api.get_latest(tags=namespace+t))
 
 
 @cli.command()
-@click.argument('tags', default='')
+@click.argument('tags', required=True)
 @click.pass_obj
-def s(ctx: Dict[str, Any], tags: str) -> None:
+def cat(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
-    t = remove_if_in_target(namespace, tags.split('/'))
+    t = [] if tags == '' else tags.split('/')
+    t = remove_if_in_target(namespace, t)
     records = api.get_latest(tags=namespace+t)
     if len(records) == 1:
         print(api.get_blob(records[0].ref).read())
@@ -109,20 +111,22 @@ def s(ctx: Dict[str, Any], tags: str) -> None:
 @cli.command()
 @click.argument('tags', default='')
 @click.pass_obj
-def h(ctx: Dict[str, Any], tags: str) -> None:
+def history(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
-    t = remove_if_in_target(namespace, tags.split('/'))
+    t = [] if tags == '' else tags.split('/')
+    t = remove_if_in_target(namespace, t)
     print_records(api.get_history(tags=namespace+t))
 
 
 @cli.command()
 @click.argument('tags')
 @click.pass_obj
-def d(ctx: Dict[str, Any], tags: str) -> None:
+def rm(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
-    t = remove_if_in_target(namespace, tags.split('/'))
+    t = [] if tags == '' else tags.split('/')
+    t = remove_if_in_target(namespace, t)
     api.delete_history(tags=namespace+t)
 
 
@@ -134,8 +138,10 @@ def mv(ctx: Dict[str, Any], src: str, dst: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
 
-    src_tags = remove_if_in_target(namespace, src.split('/'))
-    dst_tags = remove_if_in_target(namespace, dst.split('/'))
+    s = [] if src == '' else src.split('/')
+    d = [] if src == '' else dst.split('/')
+    src_tags = remove_if_in_target(namespace, s)
+    dst_tags = remove_if_in_target(namespace, d)
 
     if set(src_tags) == set(dst_tags):
         print('Cannot mv: source is equal to destination.')
