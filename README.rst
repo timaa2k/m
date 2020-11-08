@@ -22,6 +22,7 @@ Lifecycle Example
      fi
    }
 
+   # Simple todo application
    alias taskapp='M_NAMESPACE=taskapp/tasks lifecycle'
    alias tasks='taskapp tasks'
    alias today='taskapp today'
@@ -30,7 +31,12 @@ Lifecycle Example
    alias blocked='taskapp blocked'
    alias taskarchive='M_NAMESPACE=taskapp m mv tasks/done archive'
 
+   # Simple blogging application
    alias blogapp='M_NAMESPACE=blogapp/posts lifecycle'
    alias blog='blogapp blog'
    alias drafts='blogapp drafts'
    alias blogarchive='M_NAMESPACE=blogapp m mv blog/published archive'
+
+   # Simple bookmarks application
+   alias gotoapp='M_NAMESPACE=gotoapp/bookmarks lifecycle'
+   alias goto='gotoapp bookmarks'

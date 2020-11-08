@@ -1,6 +1,7 @@
 import datetime
 import time
 import os
+import webbrowser
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
@@ -102,10 +103,17 @@ def cat(ctx: Dict[str, Any], tags: str) -> None:
     t = [] if tags == '' else tags.split('/')
     t = remove_if_in_target(namespace, t)
     records = api.get_latest(tags=namespace+t)
-    if len(records) == 1:
-        print(api.get_blob(records[0].ref).read())
-    else:
+    if len(records) != 1:
         print_records(records)
+    else:
+        digest = records[0].ref
+        plain = False
+        if plain:
+            content = api.get_blob(digest).read()
+        else:
+            location = '/'.join(namespace+t)
+            URL = f'{api.addr}/latest/{location}/'
+            webbrowser.open_new_tab(URL)
 
 
 @cli.command()
