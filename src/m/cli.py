@@ -192,8 +192,7 @@ def main():
     except motherlib.client.ConnectionError:
         print(f'ConnectionError: cannot connect to server.')
     except motherlib.client.APIError as exc:
-        print(exc.err)
-        print(exc.kind)
+        print(exc.message)
 
 
 if __name__ == '__main__':
