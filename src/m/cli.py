@@ -1,9 +1,11 @@
 import datetime
 import time
 import os
+import textwrap
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
+from validator_collection import checkers
 
 import click
 from bs4 import BeautifulSoup
@@ -52,6 +54,10 @@ def upload(ctx: Dict[str, Any], tags: str, filepath: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
     t = remove_if_in_target(namespace, tags.split('/'))
+    if checkers.is_url(filepath):
+        link = f'<head><meta http-equiv="Refresh" content="0; URL={filepath}"></head>'
+        print(api.put_latest(tags=namespace+t, content=str.encode(link)))
+        return
     with Path(filepath).open() as f:
         print(api.put_latest(tags=namespace+t, content=f))
 
@@ -111,7 +117,7 @@ def is_html(content: str) -> bool:
 @cli.command()
 @click.argument('tags', required=True)
 @click.pass_obj
-def cat(ctx: Dict[str, Any], tags: str) -> None:
+def open(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
     t = [] if tags == '' else tags.split('/')
