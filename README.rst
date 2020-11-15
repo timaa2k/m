@@ -11,6 +11,8 @@ Lifecycle Example
    lifecycle() {
      if [ "$#" == 1 ]; then
        command m ls ${1}
+     elif [ "$2" = 'new' ]; then
+       command m upload "${1}/${3}" $4
      elif [ "$2" = 'edit' ]; then
        command m edit "${1}/${3}"
      elif [ "$2" = 'rename' ]; then
@@ -18,11 +20,13 @@ Lifecycle Example
      elif [ "$2" = 'mv' ]; then
        command m mv "${1}/${3}" "${3}/${4}"
      else
-       command m cat "${1}/${2}"
+       command m open "${1}/${2}"
      fi
    }
 
-   # Simple todo application
+   alias gotoapp='M_NAMESPACE=gotoapp/shortlinks lifecycle'
+   alias goto='gotoapp shortlinks'
+
    alias taskapp='M_NAMESPACE=taskapp/tasks lifecycle'
    alias tasks='taskapp tasks'
    alias today='taskapp today'
@@ -31,12 +35,7 @@ Lifecycle Example
    alias blocked='taskapp blocked'
    alias taskarchive='M_NAMESPACE=taskapp m mv tasks/done archive'
 
-   # Simple blogging application
    alias blogapp='M_NAMESPACE=blogapp/posts lifecycle'
    alias blog='blogapp blog'
    alias drafts='blogapp drafts'
    alias blogarchive='M_NAMESPACE=blogapp m mv blog/published archive'
-
-   # Simple bookmarks application
-   alias gotoapp='M_NAMESPACE=gotoapp/shortlinks lifecycle'
-   alias goto='gotoapp shortlinks'
