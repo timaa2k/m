@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
 import click
-from validator_collection import checkers
+from bs4 import BeautifulSoup
 
 import motherlib.client
 import motherlib.model
@@ -101,6 +101,13 @@ def is_binary(content: bytes) -> bool:
     return is_binary_string(content)
 
 
+def is_html(content: str) -> bool:
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        return bool(BeautifulSoup(content, "html.parser").find())
+
+
 @cli.command()
 @click.argument('tags', required=True)
 @click.pass_obj
@@ -115,14 +122,17 @@ def cat(ctx: Dict[str, Any], tags: str) -> None:
     else:
         digest = records[0].ref
         content = api.get_blob(digest).read()
-        if not is_binary(content):
-            decoded = content.decode()
-            if not checkers.is_url(decoded):
-                print(decoded)
-                return
         location = '/'.join(namespace+t)
         URL = f'{api.addr}/latest/{location}/'
-        webbrowser.open_new_tab(URL)
+        if is_binary(content):
+            webbrowser.open_new_tab(URL)
+            return
+        decoded = content.decode()
+        if is_html(decoded):
+            webbrowser.open_new_tab(URL)
+            return
+        else:
+            print(decoded)
 
 
 @cli.command()
