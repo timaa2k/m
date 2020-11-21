@@ -15,6 +15,22 @@ import motherlib.model
 from m import __version__
 
 
+CREDENTIALS_PATH = os.environ['HOME'] + '/.config/m/credentials'
+
+
+def save_token(t: str) -> None:
+    Path(CREDENTIALS_PATH).parent.mkdir(parents=True, exist_ok=True)
+    Path(CREDENTIALS_PATH).write_text(t)
+
+
+def load_token() -> str:
+    return Path(CREDENTIALS_PATH).read_text()
+
+
+def is_valid_jwt(token: str) -> bool:
+    return True
+
+
 def remove_if_in_target(tags: List[str], target: List[str]) -> List[str]:
     n = {}
     for tag in tags:
@@ -38,12 +54,47 @@ def print_records(records: List[motherlib.model.Record]) -> None:
 @click.pass_context
 def cli(ctx: click.Context, host: str, namespace: str) -> None:
     if ctx.obj is None:
-       ctx.obj = {}  # type=Dict[str, Any]
-    ctx.obj['api'] = motherlib.client.APIClient(addr=os.getenv('M_HOST', host))
-    ns_tags = os.getenv('M_NAMESPACE', namespace)
-    ctx.obj['namespace'] = [] if ns_tags == '' else ns_tags.split('/')
-    if ctx.invoked_subcommand is None:
-        ctx.invoke(ls)
+        ctx.obj = {}  # type=Dict[str, Any]
+
+    if ctx.invoked_subcommand == 'login':
+        ctx.obj['api'] = motherlib.client.APIClient(addr=os.getenv('M_HOST', host))
+    else:
+        try:
+            token = load_token()
+        except FileNotFoundError:
+            print('Please sign in via the login subcommand')
+            exit(1)
+
+        ctx.obj['api'] = motherlib.client.APIClient(
+            addr=os.getenv('M_HOST', host),
+            bearer_token=token,
+        )
+        ns_tags = os.getenv('M_NAMESPACE', namespace)
+        ctx.obj['namespace'] = [] if ns_tags == '' else ns_tags.split('/')
+        if ctx.invoked_subcommand is None:
+            ctx.invoke(ls)
+
+
+@cli.command()
+@click.argument(
+    'provider',
+    required=True,
+    type=click.Choice(['google'], case_sensitive=False),
+)
+@click.pass_obj
+def login(ctx: Dict[str, Any], provider: str) -> None:
+    api = ctx['api']
+    authinfo = api.get_login_info(provider=provider)
+    print('')
+    print(f'Copy the following URL into your browser to sign in via {authinfo.provider_name}')
+    print('')
+    print(authinfo.auth_url)
+    print('')
+    token = click.prompt('Paste the resulting authentication token into the terminal')
+    if not is_valid_jwt(token):
+        print('Invalid token submitted')
+        return
+    save_token(token)
 
 
 @cli.command()
