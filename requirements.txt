@@ -1,4 +1,5 @@
 git+https://github.com/timaa2k/motherlib@master#egg=motherlib-0.1.0
 beautifulsoup4==4.9.3
 click==7.0
+PyJWT==1.7.1
 validator-collection==1.5.0

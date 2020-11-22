@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Union
 from validator_collection import checkers
 
 import click
+import jwt
 from bs4 import BeautifulSoup
 
 import motherlib.client
@@ -29,7 +30,16 @@ def load_token() -> str:
 
 
 def is_valid_jwt(token: str) -> bool:
+    try:
+        jwt.decode(token, verify=False)
+    except Exception:
+        return False
     return True
+
+
+def uid_from_jwt(token: str) -> str:
+    decoded = jwt.decode(token, verify=False)
+    return decoded['uid']
 
 
 def remove_if_in_target(tags: List[str], target: List[str]) -> List[str]:
@@ -45,7 +55,7 @@ def filter_and_prefix_with_base(tags: List[str]) -> List[str]:
 
 def print_records(records: List[motherlib.model.Record]) -> None:
     for r in records:
-        print(f'{r.created.date()} {r.ref[:9]} {"/".join(r.tags)}')
+        print(f'{r.created.date()} {r.ref.split("/blob/")[1][:9]} {"/".join(r.tags)}')
 
 
 @click.group(invoke_without_command=True)
@@ -58,7 +68,10 @@ def cli(ctx: click.Context, host: str, namespace: str) -> None:
         ctx.obj = {}  # type=Dict[str, Any]
 
     if ctx.invoked_subcommand == 'login':
-        ctx.obj['api'] = motherlib.client.APIClient(addr=os.getenv('M_HOST', host))
+        ctx.obj['api'] = motherlib.client.APIClient(
+            addr=os.getenv('M_HOST', host),
+            resource_owner_uid='',
+        )
     else:
         try:
             token = load_token()
@@ -68,6 +81,7 @@ def cli(ctx: click.Context, host: str, namespace: str) -> None:
 
         ctx.obj['api'] = motherlib.client.APIClient(
             addr=os.getenv('M_HOST', host),
+            resource_owner_uid=uid_from_jwt(token),
             bearer_token=token,
         )
         ns_tags = os.getenv('M_NAMESPACE', namespace)
@@ -92,7 +106,7 @@ def login(ctx: Dict[str, Any], provider: str) -> None:
     print(authinfo.auth_url)
     print('')
     token = click.prompt('Paste the resulting authentication token into the terminal')
-    if not is_valid_jwt(token):
+    if not is_valid_jwt(token.strip()):
         print('Invalid token submitted')
         return
     save_token(token)
