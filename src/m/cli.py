@@ -1,6 +1,7 @@
 import datetime
 import time
 import os
+import sys
 import textwrap
 import webbrowser
 from pathlib import Path
@@ -63,7 +64,7 @@ def cli(ctx: click.Context, host: str, namespace: str) -> None:
             token = load_token()
         except FileNotFoundError:
             print('Please sign in via the login subcommand')
-            exit(1)
+            sys.exit(1)
 
         ctx.obj['api'] = motherlib.client.APIClient(
             addr=os.getenv('M_HOST', host),
