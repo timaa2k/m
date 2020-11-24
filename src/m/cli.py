@@ -55,7 +55,7 @@ def filter_and_prefix_with_base(tags: List[str]) -> List[str]:
 
 def print_records(records: List[motherlib.model.Record]) -> None:
     for r in records:
-        print(f'{r.created.date()} {r.ref.split("/blob/")[1][:9]} {"/".join(r.tags)}')
+        print(f'{r.created.date()} {r.ref.split("/cas/")[1][:9]} {"/".join(r.tags)}')
 
 
 @click.group(invoke_without_command=True)
@@ -193,9 +193,9 @@ def open(ctx: Dict[str, Any], tags: str) -> None:
         print_records(records)
     else:
         digest = records[0].ref
-        content = api.get_blob(digest).read()
+        content = api.cas_get(digest).read()
         location = '/'.join(namespace+t)
-        URL = f'{api.addr}/latest/{location}/'
+        URL = f'{api.addr}{digest}'
         if is_binary(content):
             webbrowser.open_new_tab(URL)
             return
@@ -257,7 +257,7 @@ def mv(ctx: Dict[str, Any], src: str, dst: str) -> None:
     records = api.get_history(tags=namespace+src_tags)
 
     for r in reversed(records):
-        content = api.get_blob(ref=r.ref).read()
+        content = api.cas_get(ref=r.ref).read()
 
         t = namespace + dst_tags + r.tags
 
