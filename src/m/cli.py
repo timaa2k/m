@@ -3,6 +3,7 @@ import time
 import os
 import sys
 import textwrap
+import urllib3
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
@@ -15,6 +16,9 @@ from bs4 import BeautifulSoup
 import motherlib.client
 import motherlib.model
 from m import __version__
+
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 CREDENTIALS_PATH = os.environ['HOME'] + '/.config/m/credentials'
@@ -59,7 +63,7 @@ def print_records(records: List[motherlib.model.Record]) -> None:
 
 
 @click.group(invoke_without_command=True)
-@click.option('-h', '--host', type=str, default='http://localhost:8080')
+@click.option('-h', '--host', type=str, default='https://localhost')
 @click.option('-n', '--namespace', type=str, default='')
 @click.version_option(version=__version__)
 @click.pass_context
