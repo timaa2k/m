@@ -128,7 +128,7 @@ def upload(ctx: Dict[str, Any], tags: str, filepath: str) -> None:
         link = f'<head><meta http-equiv="Refresh" content="0; URL={filepath}"></head>'
         print(api.put_latest(tags=namespace+t, content=str.encode(link)))
         return
-    with Path(filepath).open() as f:
+    with Path(filepath).open(mode='rb') as f:
         print(api.put_latest(tags=namespace+t, content=f))
 
 
