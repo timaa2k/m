@@ -6,7 +6,7 @@ import textwrap
 import urllib3
 import webbrowser
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union, Set
 from validator_collection import checkers
 
 import click
@@ -57,9 +57,10 @@ def filter_and_prefix_with_base(tags: List[str]) -> List[str]:
     return tags
 
 
-def print_records(records: List[motherlib.model.Record]) -> None:
+def print_records(namespace: Set[str], records: List[motherlib.model.Record]) -> None:
     for r in records:
-        print(f'{r.created.date()} {r.ref.split("/cas/")[1][:9]} {"/".join(r.tags)}')
+        t = remove_if_in_target(namespace, r.tags)
+        print(f'{r.created.date()} {r.ref.split("/cas/")[1][:9]} {"/".join(t)}')
 
 
 @click.group(invoke_without_command=True)
@@ -149,7 +150,7 @@ def edit(ctx: Dict[str, Any], tags: str) -> None:
     previous = ''
     if exists:
         if len(records) > 1:
-            print_records(records)
+            print_records(namespace, records)
             return
         content = api.get_blob(records[0].ref)
         previous = content.read().decode()
@@ -168,7 +169,7 @@ def ls(ctx: Dict[str, Any], tags: str) -> None:
     namespace = ctx['namespace']
     t = [] if tags == '' else tags.split('/')
     t = remove_if_in_target(namespace, t)
-    print_records(api.get_latest(tags=namespace+t))
+    print_records(namespace, api.get_latest(tags=namespace+t))
 
 
 def is_binary(content: bytes) -> bool:
@@ -194,7 +195,7 @@ def open(ctx: Dict[str, Any], tags: str) -> None:
     t = remove_if_in_target(namespace, t)
     records = api.get_latest(tags=namespace+t)
     if len(records) != 1:
-        print_records(records)
+        print_records(namespace, records)
     else:
         digest = records[0].ref
         content = api.cas_get(digest).read()
@@ -219,7 +220,7 @@ def history(ctx: Dict[str, Any], tags: str) -> None:
     namespace = ctx['namespace']
     t = [] if tags == '' else tags.split('/')
     t = remove_if_in_target(namespace, t)
-    print_records(api.get_history(tags=namespace+t))
+    print_records(namespace, api.get_history(tags=namespace+t))
 
 
 @cli.command()
