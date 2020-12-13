@@ -246,25 +246,14 @@ def mv(ctx: Dict[str, Any], src: str, dst: str) -> None:
     src_tags = remove_if_in_target(namespace, s)
     dst_tags = remove_if_in_target(namespace, d)
 
-    if set(src_tags) == set(dst_tags):
-        print('Cannot mv: source is equal to destination.')
-        return
-
-    if set(src_tags) <= set(dst_tags):
-        print('Cannot mv: source is a subset of destination.')
-        return
-
-    if set(dst_tags) <= set(src_tags):
-        print('Cannot mv: destination is a subset of source.')
-        return
-
     records = api.get_history(tags=namespace+src_tags)
 
     for r in reversed(records):
         content = api.cas_get(ref=r.ref).read()
 
-        t = namespace + dst_tags + r.tags
-
+        t = remove_if_in_target(namespace, r.tags)
+        t = remove_if_in_target(src_tags, t)
+        t = namespace + dst_tags + t
         digest = api.put_latest(tags=t, content=content)
 
         print(digest)
