@@ -57,9 +57,10 @@ def filter_and_prefix_with_base(tags: List[str]) -> List[str]:
     return tags
 
 
-def print_records(namespace: Set[str], records: List[motherlib.model.Record]) -> None:
+def print_records(namespace: Set[str], src_tags: Set[str], records: List[motherlib.model.Record]) -> None:
     for r in records:
         t = remove_if_in_target(namespace, r.tags)
+        t = remove_if_in_target(src_tags, t)
         print(f'{r.created.date()} {r.ref.split("/cas/")[1][:9]} {"/".join(t)}')
 
 
@@ -150,7 +151,7 @@ def edit(ctx: Dict[str, Any], tags: str) -> None:
     previous = ''
     if exists:
         if len(records) > 1:
-            print_records(namespace, records)
+            print_records(namespace, t, records)
             return
         content = api.get_blob(records[0].ref)
         previous = content.read().decode()
@@ -169,7 +170,7 @@ def ls(ctx: Dict[str, Any], tags: str) -> None:
     namespace = ctx['namespace']
     t = [] if tags == '' else tags.split('/')
     t = remove_if_in_target(namespace, t)
-    print_records(namespace, api.get_latest(tags=namespace+t))
+    print_records(namespace, t, api.get_latest(tags=namespace+t))
 
 
 def is_binary(content: bytes) -> bool:
@@ -195,7 +196,7 @@ def open(ctx: Dict[str, Any], tags: str) -> None:
     t = remove_if_in_target(namespace, t)
     records = api.get_latest(tags=namespace+t)
     if len(records) != 1:
-        print_records(namespace, records)
+        print_records(namespace, t, records)
     else:
         digest = records[0].ref
         content = api.cas_get(digest).read()
@@ -220,7 +221,7 @@ def history(ctx: Dict[str, Any], tags: str) -> None:
     namespace = ctx['namespace']
     t = [] if tags == '' else tags.split('/')
     t = remove_if_in_target(namespace, t)
-    print_records(namespace, api.get_history(tags=namespace+t))
+    print_records(namespace, t, api.get_history(tags=namespace+t))
 
 
 @cli.command()
