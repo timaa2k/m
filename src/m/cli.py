@@ -58,10 +58,22 @@ def filter_and_prefix_with_base(tags: List[str]) -> List[str]:
 
 
 def print_records(namespace: Set[str], src_tags: Set[str], records: List[motherlib.model.Record]) -> None:
+    ranking = {}
     for r in records:
-        t = remove_if_in_target(namespace, r.tags)
-        t = remove_if_in_target(src_tags, t)
-        print(f'{r.created.date()} {r.ref.split("/cas/")[1][:9]} {"/".join(t)}')
+        r.tags = remove_if_in_target(namespace, r.tags)
+        r.tags = remove_if_in_target(src_tags, r.tags)
+
+        for word in r.tags:
+            if word in ranking:
+                ranking[word] += 1
+            else:
+                ranking[word] = 1
+
+    for r in records:
+        l = [(t, ranking[t]) for t in r.tags]
+        tags = list(map(lambda x: x[0], sorted(l, key=lambda x: x[1], reverse=True)))
+
+        print(f'{r.created.date()} {r.ref.split("/cas/")[1][:9]} {"/".join(tags)}')
 
 
 @click.group(invoke_without_command=True)
