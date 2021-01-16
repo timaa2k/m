@@ -77,7 +77,7 @@ def print_records(namespace: Set[str], src_tags: Set[str], records: List[motherl
 
 
 @click.group(invoke_without_command=True)
-@click.option('-h', '--host', type=str, default='https://localhost')
+@click.option('-h', '--host', type=str, default='https://mothergit.com')
 @click.option('-n', '--namespace', type=str, default='')
 @click.version_option(version=__version__)
 @click.pass_context
