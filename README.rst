@@ -1,6 +1,78 @@
 m
 =
 
+
+Available Commands
+------------------
+
+.. code-block:: bash
+
+   $ m --help
+
+   Usage: m [OPTIONS] COMMAND [ARGS]...
+
+   Options:
+     -h, --host TEXT
+     -n, --namespace TEXT
+     --version             Show the version and exit.
+     --help                Show this message and exit.
+
+   Commands:
+     edit
+     history
+     login
+     ls
+     mv
+     open
+     rm
+     upload
+
+
+Usage
+-----
+
+.. code-block:: bash
+
+   $ m login google
+
+   $ m upload hello/world <(echo "hello world")
+   a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447-12
+
+   $ m ls
+   2021-01-18 a948904f2 hello/world
+
+   $ m open hello/world
+   hello world
+
+   $ m open world
+   hello world
+
+   $ m upload hello/world <(echo "hello world again")
+   f750b886d6e786f7e238e232b54194c6e24625c47755bd87a396211b5f1a4316-18
+
+   $ m history hello/world
+   2021-01-18 f750b886d
+   2021-01-18 a948904f2
+
+   $ m open hello/world
+   hello world again
+
+   $ m mv hello/world a/b
+   a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447-12
+   f750b886d6e786f7e238e232b54194c6e24625c47755bd87a396211b5f1a4316-18
+
+   $ m history a/b
+   2021-01-18 f750b886d
+   2021-01-18 a948904f2
+
+   $ m upload gotoapp/shortlinks/youtube https://youtube.com
+   8e95412bfd03b66541b5f208b86e7001f2aa1d7c211796e4972ce103cb9bcef7-77
+
+   $ m open youtube
+
+   $ m rm youtube
+
+
 Lifecycle Example
 -----------------
 
