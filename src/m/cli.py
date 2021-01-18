@@ -165,7 +165,7 @@ def edit(ctx: Dict[str, Any], tags: str) -> None:
         if len(records) > 1:
             print_records(namespace, t, records)
             return
-        content = api.get_blob(records[0].ref)
+        content = api.cas_get(records[0].ref)
         previous = content.read().decode()
     message = click.edit(previous)
     if message is None:
@@ -207,9 +207,9 @@ def open(ctx: Dict[str, Any], tags: str) -> None:
     t = [] if tags == '' else tags.split('/')
     t = remove_if_in_target(namespace, t)
     records = api.get_latest(tags=namespace+t)
-    if len(records) != 1:
+    if len(records) > 1:
         print_records(namespace, t, records)
-    else:
+    elif len(records) == 1:
         digest = records[0].ref
         content = api.cas_get(digest).read()
         location = '/'.join(namespace+t)
@@ -223,6 +223,8 @@ def open(ctx: Dict[str, Any], tags: str) -> None:
             return
         else:
             print(decoded)
+    else:
+        print(f'No matches for tags [{tags}]')
 
 
 @cli.command()
