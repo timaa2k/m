@@ -44,10 +44,7 @@ Usage
    $ m open hello/world
    hello world
 
-   $ m open world
-   hello world
-
-   $ m upload hello/world <(echo "hello world again")
+   $ m edit hello/world
    f750b886d6e786f7e238e232b54194c6e24625c47755bd87a396211b5f1a4316-18
 
    $ m history hello/world
@@ -57,16 +54,23 @@ Usage
    $ m open hello/world
    hello world again
 
-   $ m mv hello/world a/b
+   $ m mv hello/world tasks/todo/first-task
    a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447-12
    f750b886d6e786f7e238e232b54194c6e24625c47755bd87a396211b5f1a4316-18
 
-   $ m history a/b
+   $ m history tasks/todo/first-task
    2021-01-18 f750b886d
    2021-01-18 a948904f2
 
+   $ m upload gotoapp/shortlinks/google https://google.com
+   e70c48da01df540a8c2941ca58d38f80521912d24654caa45f0de49523454c73-76
+
    $ m upload gotoapp/shortlinks/youtube https://youtube.com
    8e95412bfd03b66541b5f208b86e7001f2aa1d7c211796e4972ce103cb9bcef7-77
+
+   $ m -n gotoapp/shortlinks ls
+   2021-01-18 8e95412bf youtube
+   2021-01-18 e70c48da0 google
 
    $ m open youtube
 
