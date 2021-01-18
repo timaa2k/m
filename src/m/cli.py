@@ -153,23 +153,17 @@ def edit(ctx: Dict[str, Any], tags: str) -> None:
     api = ctx['api']
     namespace = ctx['namespace']
     t = remove_if_in_target(namespace, tags.split('/'))
-    exists = True
-    try:
-        records = api.get_latest(tags=namespace+t)
-    except motherlib.client.APIError as exc:
-        if exc.kind != "Not found":
-            raise
-        exists = False
+    records = api.get_latest(tags=namespace+t)
+    if len(records) > 1:
+        print_records(namespace, t, records)
+        return
     previous = ''
-    if exists:
-        if len(records) > 1:
-            print_records(namespace, t, records)
-            return
+    if len(records) == 1:
         content = api.cas_get(records[0].ref)
         previous = content.read().decode()
     message = click.edit(previous)
     if message is None:
-        print('Leaving content unchanged.')
+        print('Leaving content unchanged')
         return
     print(api.put_latest(tags=namespace+t, content=str.encode(message)))
 
