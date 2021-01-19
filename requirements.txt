@@ -1,4 +1,4 @@
-git+https://github.com/timaa2k/motherlib@master#egg=motherlib-0.1.0
+https://github.com/timaa2k/motherlib/archive/598fde4e01bbfa967cec9eff8db43a288519e1b5.tar.gz#egg=motherlib-0.1.0
 beautifulsoup4==4.9.3
 click==7.0
 PyJWT==1.7.1
