@@ -13,7 +13,7 @@ def _get_dependencies(requirements_file: pathlib.Path) -> List[str]:
     for dep in lines:
         if dep.startswith('#'):
             continue
-        if dep.startswith('git+https://'):
+        if dep.startswith('https://'):
             pkg_string = dep.split('#egg=')[1]
             pkg, version = pkg_string.split('-')
             dep = pkg + ' @ ' + dep
@@ -44,7 +44,7 @@ setuptools.setup(
     packages=setuptools.find_packages(where='src'),
     package_dir={'': 'src'},
     zip_safe=False,
-    install_requires=INSTALL_REQUIRES + ['motherlib @ git+https://github.com/timaa2k/motherlib@master#egg=motherlib-0.1.0'],
+    install_requires=INSTALL_REQUIRES,
     extras_require={
         'dev': DEV_REQUIRES,
     },
