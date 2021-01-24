@@ -5,6 +5,7 @@ import sys
 import textwrap
 import urllib3
 import webbrowser
+from appdirs import AppDirs
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union, Set
 from validator_collection import checkers
@@ -21,16 +22,17 @@ from m import __version__
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-CREDENTIALS_PATH = os.environ['HOME'] + '/.config/m/credentials'
+APPDIRS = AppDirs("m", "mothergit")
 
+CREDENTIALS_PATH = Path(str(Path(APPDIRS.user_data_dir) / 'credentials'))
 
 def save_token(t: str) -> None:
-    Path(CREDENTIALS_PATH).parent.mkdir(parents=True, exist_ok=True)
-    Path(CREDENTIALS_PATH).write_text(t)
+    CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CREDENTIALS_PATH.write_text(t)
 
 
 def load_token() -> str:
-    return Path(CREDENTIALS_PATH).read_text()
+    return CREDENTIALS_PATH.read_text()
 
 
 def is_valid_jwt(token: str) -> bool:
